@@ -92,9 +92,13 @@ try:
         r = requests.post(api_url + 'deposits/payment-method', auth=auth, data=json.dumps(sendData))
         if(r.status_code == 200 and "payout_at" in r.json()):
             print("Successful deposit.")
+            with open(SCRIPT_PATH + "log.log", "a") as f:
+                f.write(str(datetime.now()) + ": " + "Successfully deposited $" + balance_orderx2_diff + " into Coinbase Pro." + "\n")
         else:
             print("Failed deposit.")
             print(r.text)
+            with open(SCRIPT_PATH + "log.log", "a") as f:
+                f.write(str(datetime.now()) + ": " + "Failed deposit: "+ r.text + "\n")
             
         
     # Step 3. Order Bitcoin
@@ -103,6 +107,8 @@ try:
     r = requests.post(api_url + 'orders', auth=auth, data=json.dumps(sendData))
     if(r.status_code == 200 and "status" in r.json() and r.json()["status"] == "pending"):
         print("Successful order.")
+        with open(SCRIPT_PATH + "log.log", "a") as f:
+            f.write(str(datetime.now()) + ": " + "Successfully bought $" + settings["orderInDollars"] + " worth of BTC." + "\n")
     else:
         print("Order failed.")
         print(r.text)
@@ -111,5 +117,5 @@ try:
 
 except Exception as e:
     with open(SCRIPT_PATH + "error.log", "a") as f:
-            f.write(str(datetime.now()) + ": " + str(e)+"\n")
+        f.write(str(datetime.now()) + ": " + str(e)+"\n")
     raise e
