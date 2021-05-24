@@ -107,7 +107,7 @@ def placeOrder(amount):
         r = tryPlaceOrder(sendData)
         if(r.status_code == 200 and "funds" in r.json()):
             print("Successful order.")
-            logNormal(str(datetime.now()) + ": " + "Successfully bought $" + str(r.json()["funds"]) + " BTC.")
+            logNormal(str(datetime.now()) + ": " + "Successfully bought $" + str(r.json()["funds"]) + " of BTC.")
             return
         elif(tryCount+1 <= settings["retryOrderCount"] and r.status_code == 400 and "message" in r.json() and r.json()["message"] == "Insufficient funds"):
             print("Order failed on attempt #" + str(tryCount) + ". Trying again in " + str(settings["retryOrderWaitSeconds"]) + " seconds.")
