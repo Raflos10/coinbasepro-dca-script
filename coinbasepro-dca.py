@@ -112,6 +112,8 @@ try:
     else:
         print("Order failed.")
         print(r.text)
+        with open(SCRIPT_PATH + "log.log", "a") as f:
+            f.write(str(datetime.now()) + ": " + "Failed order: "+ r.text + "\n")
         
     print("End")
 
