@@ -93,7 +93,7 @@ try:
         if(r.status_code == 200 and "payout_at" in r.json()):
             print("Successful deposit.")
             with open(SCRIPT_PATH + "log.log", "a") as f:
-                f.write(str(datetime.now()) + ": " + "Successfully deposited $" + balance_orderx2_diff + " into Coinbase Pro." + "\n")
+                f.write(str(datetime.now()) + ": " + "Successfully deposited $" + str(balance_orderx2_diff) + " into Coinbase Pro." + "\n")
         else:
             print("Failed deposit.")
             print(r.text)
@@ -108,7 +108,7 @@ try:
     if(r.status_code == 200 and "status" in r.json() and r.json()["status"] == "pending"):
         print("Successful order.")
         with open(SCRIPT_PATH + "log.log", "a") as f:
-            f.write(str(datetime.now()) + ": " + "Successfully bought $" + settings["orderInDollars"] + " worth of BTC." + "\n")
+            f.write(str(datetime.now()) + ": " + "Successfully bought $" + str(settings["orderInDollars"]) + " worth of BTC." + "\n")
     else:
         print("Order failed.")
         print(r.text)
