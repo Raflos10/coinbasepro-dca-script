@@ -95,20 +95,30 @@ def depositFromBank(amount):
         print("Failed deposit.")
         print(r.text)
         logNormal(str(datetime.now()) + ": " + "Failed deposit: "+ r.text + "\n")
+
+def tryPlaceOrder(sendData):
+    return requests.post(api_url + 'orders', auth=auth, data=json.dumps(sendData))
         
 def placeOrder(amount):
-    print("Ordering Bitcoin")
+    print("Ordering " + str(amount) + " of Bitcoin")
+    tryCount = 1
     sendData = {"type":"market", "side":"buy", "product_id":"BTC-USD", "funds":amount}
-    r = requests.post(api_url + 'orders', auth=auth, data=json.dumps(sendData))
-    
-    if(r.status_code == 200 and "status" in r.json() and r.json()["status"] == "pending"):
-        print("Successful order.")
-        logNormal(str(datetime.now()) + ": " + "Successfully bought $" + str(settings["orderInDollars"]) + " worth of BTC." + "\n")
-    else:
-        print("Order failed.")
-        print(r.status_code)
-        print(r.text)
-        logNormal(str(datetime.now()) + ": " + "Failed order: "+ r.text + "\n")
+    while tryCount <= settings["retryOrderCount"]:
+        r = tryPlaceOrder(sendData)
+        if(r.status_code == 200 and "status" in r.json() and r.json()["status"] == "pending"):
+            print("Successful order.")
+            logNormal(str(datetime.now()) + ": " + "Successfully bought $" + str(settings["orderInDollars"]) + " worth of BTC." + "\n")
+            return
+        elif(tryCount+1 <= settings["retryOrderCount"] and r.status_code == 400 and "message" in r.json() and r.json()["message"] == "Insufficient funds"):
+            print("Order failed on attempt #" + str(tryCount) + ". Trying again in " + str(settings["retryOrderWaitSeconds"]) + " seconds.")
+            time.sleep(settings["retryOrderWaitSeconds"])
+            tryCount += 1
+        else:
+            print("Order failed on attempt #" + str(tryCount) + ".")
+            print(r.status_code)
+            print(r.text)
+            logError(str(r.status_code) + ": " + r.text)
+            break
 
 
 # Start
