@@ -1,7 +1,7 @@
 # dependent on requests package (pip install requests)
 # and Path (pip install pathlib)
 
-import json, hmac, hashlib, time, requests, base64
+import json, hmac, hashlib, time, requests, base64, math
 from requests.auth import AuthBase
 from pathlib import Path
 
@@ -47,11 +47,40 @@ def setJsonFile(name, text):
             f.write(json.dumps(text))
     except Exception as e:
         print("Failed to write file: " + name + "because of exception: " + str(e))
+        raise e
     
     
 auth_info = getJsonFile("auth.json")
 auth = CoinbaseExchangeAuth(auth_info["key"], auth_info["secret"], auth_info["password"])
 settings = getJsonFile("app.conf.json")
 
-r = requests.get(api_url + 'accounts', auth=auth)
-print(r.json())
+# Step 1. Get USD Balance
+print("Getting USD balance.")
+r = requests.get(api_url + 'accounts', auth=auth).json()
+usd_balance = -1
+for currency in r:
+    if(currency["currency"] == "USD"):
+        usd_balance = float(currency["balance"])
+        break
+print("USD balance is: " + str(round(usd_balance, 2)))
+        
+# Step 2. If USD balance is lower than 2x the purchase amount, top up
+balance_orderx2_diff = (settings["orderInDollars"] * 2) - usd_balance
+balance_orderx2_diff = round(balance_orderx2_diff, 2) + 0.01 # add a penny in case of rounding down
+if(balance_orderx2_diff > 0):
+    print("Balance is " + str(balance_orderx2_diff) + " lower than double order amount, attempting to top up")
+    
+    r = requests.get(api_url + 'payment-methods', auth=auth).json()
+    bankId = ""
+    for bank in r:
+        if(settings["bankIdentifier"] in bank["name"]):
+            print("Using payment method: " + bank["name"])
+            bankId = bank["id"]
+            break
+    if(bankId == ""):
+        raise Exception("Bank Identifier not found in payment methods")
+    
+    print("Requesting deposit...")
+    sendData = {"amount":balance_orderx2_diff, "currency":"USD", "payment_method_id":bankId}
+    r = requests.post(api_url + 'deposits/payment-method', auth=auth, data=json.dumps(sendData))
+    print(r.text)

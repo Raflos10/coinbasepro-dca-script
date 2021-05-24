@@ -1,3 +1,4 @@
 {
-  "orderInDollars": 20
+  "orderInDollars": 5,
+  "bankIdentifier": "bank-identifier-here"
 } 
