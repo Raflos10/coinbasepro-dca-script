@@ -1,7 +1,7 @@
 # dependent on requests package (pip install requests)
 # and Path (pip install pathlib)
 
-import json, hmac, hashlib, time, requests, base64, math, os
+import json, hmac, hashlib, time, requests, base64, math, os, sys
 from requests.auth import AuthBase
 from pathlib import Path
 from datetime import datetime
@@ -105,9 +105,9 @@ def placeOrder(amount):
     sendData = {"type":"market", "side":"buy", "product_id":"BTC-USD", "funds":amount}
     while tryCount <= settings["retryOrderCount"]:
         r = tryPlaceOrder(sendData)
-        if(r.status_code == 200 and "status" in r.json() and r.json()["status"] == "pending"):
+        if(r.status_code == 200 and "size" in r.json()):
             print("Successful order.")
-            logNormal(str(datetime.now()) + ": " + "Successfully bought $" + str(settings["orderInDollars"]) + " worth of BTC.")
+            logNormal(str(datetime.now()) + ": " + "Successfully bought $" + str(r.json()["size"]) + " BTC.")
             return
         elif(tryCount+1 <= settings["retryOrderCount"] and r.status_code == 400 and "message" in r.json() and r.json()["message"] == "Insufficient funds"):
             print("Order failed on attempt #" + str(tryCount) + ". Trying again in " + str(settings["retryOrderWaitSeconds"]) + " seconds.")
@@ -122,26 +122,31 @@ def placeOrder(amount):
 
 
 # Start
-try:
-    auth_info = getJsonFile("auth.json")
-    auth = CoinbaseExchangeAuth(auth_info["key"], auth_info["secret"], auth_info["password"])
-    settings = getJsonFile("app.conf.json")
+if(len(sys.argv) != 2):
+    print("Useage: python coinbasepro-dca.py [dollar amount]")
+else:
+    dollar_amount = int(sys.argv[1])
 
-    # Step 1. Get USD Balance
-    usd_balance = getUsdBalance()
-            
-    # Step 2. If USD balance is lower than the purchase amount, top up
-    balance_order_diff = settings["orderInDollars"] - usd_balance
-    balance_order_diff = round(balance_order_diff, 2) + 0.01 # add a penny in case of rounding down
-    if(balance_order_diff > 0):
-        print("Balance is " + str(balance_order_diff) + " lower than order amount, attempting to top up")
-        depositFromBank(balance_order_diff)
-    
-    # Step 3. Order Bitcoin
-    placeOrder(settings["orderInDollars"])
+    try:
+        auth_info = getJsonFile("auth.json")
+        auth = CoinbaseExchangeAuth(auth_info["key"], auth_info["secret"], auth_info["password"])
+        settings = getJsonFile("app.conf.json")
+
+        # Step 1. Get USD Balance
+        usd_balance = getUsdBalance()
+                
+        # Step 2. If USD balance is lower than the purchase amount, top up
+        balance_order_diff = dollar_amount - usd_balance
+        balance_order_diff = round(balance_order_diff, 2) + 0.01 # add a penny in case of rounding down
+        if(balance_order_diff > 0):
+            print("Balance is " + str(balance_order_diff) + " lower than order amount, attempting to top up")
+            depositFromBank(balance_order_diff)
         
-    print("End")
+        # Step 3. Order Bitcoin
+        placeOrder(dollar_amount)
+            
+        print("End")
 
-except Exception as e:
-    logError(str(datetime.now()) + ": " + str(e))
-    raise e
+    except Exception as e:
+        logError(str(datetime.now()) + ": " + str(e))
+        raise e

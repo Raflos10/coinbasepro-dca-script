@@ -1,5 +1,4 @@
 {
-  "orderInDollars": 5,
   "bankIdentifier": "bank-identifier-here",
   "retryOrderCount": 4,
   "retryOrderWaitSeconds": 30
