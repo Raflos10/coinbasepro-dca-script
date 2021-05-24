@@ -56,13 +56,16 @@ settings = getJsonFile("app.conf.json")
 
 # Step 1. Get USD Balance
 print("Getting USD balance.")
-r = requests.get(api_url + 'accounts', auth=auth).json()
+r = requests.get(api_url + 'accounts', auth=auth)
 usd_balance = -1
-for currency in r:
-    if(currency["currency"] == "USD"):
-        usd_balance = float(currency["balance"])
-        break
-print("USD balance is: " + str(round(usd_balance, 2)))
+if(r.status_code == 200)
+    for currency in r.json():
+        if(currency["currency"] == "USD"):
+            usd_balance = float(currency["balance"])
+            break
+    print("USD balance is: " + str(round(usd_balance, 2)))
+else:
+    raise Exception("Failed to get USD balance.")
         
 # Step 2. If USD balance is lower than 2x the purchase amount, top up
 balance_orderx2_diff = (settings["orderInDollars"] * 2) - usd_balance
@@ -83,4 +86,21 @@ if(balance_orderx2_diff > 0):
     print("Requesting deposit...")
     sendData = {"amount":balance_orderx2_diff, "currency":"USD", "payment_method_id":bankId}
     r = requests.post(api_url + 'deposits/payment-method', auth=auth, data=json.dumps(sendData))
+    if(r.status_code == 200 and "payout_at" in r.json()):
+        print("Successful deposit.")
+    else:
+        print("Failed deposit.")
+        print(r.text)
+        
+    
+# Step 3. Order Bitcoin
+print("Ordering Bitcoin")
+sendData = {"type":"market", "side":"buy", "product_id":"BTC-USD", "funds":settings["orderInDollars"]}
+r = requests.post(api_url + 'orders', auth=auth, data=json.dumps(sendData))
+if(r.status_code == 200 and "status" in r.json() and r.json()["status"] == "pending"):
+    print("Successful order.")
+else:
+    print("Order failed.")
     print(r.text)
+    
+print("End")
