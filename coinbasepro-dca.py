@@ -52,72 +52,85 @@ def setJsonFile(name, text):
         print("Failed to write file: " + name + "because of exception: " + str(e))
         raise e
     
+def logNormal(message):
+    with open(SCRIPT_PATH + "log.log", "a") as f:
+        f.write(message)
 
+def logError(message):
+    with open(SCRIPT_PATH + "error.log", "a") as f:
+        f.write(message)
+
+
+def getUsdBalance():
+    print("Getting USD balance.")
+    r = requests.get(api_url + 'accounts', auth=auth)
+    if(r.status_code == 200):
+        for currency in r.json():
+            if(currency["currency"] == "USD"):
+                balance = round(float(currency["balance"]), 2)
+                print("USD balance is: " + str(balance))
+                return float(currency["balance"])
+    else:
+        raise Exception("Failed to get USD balance.")
+
+def depositFromBank(amount):
+    r = requests.get(api_url + 'payment-methods', auth=auth).json()
+    bankId = ""
+    for bank in r:
+        if(settings["bankIdentifier"] in bank["name"]):
+            print("Using payment method: " + bank["name"])
+            bankId = bank["id"]
+            break
+    if(bankId == ""):
+        raise Exception("Bank Identifier not found in payment methods")
+    
+    print("Requesting deposit...")
+    sendData = {"amount":amount, "currency":"USD", "payment_method_id":bankId}
+    r = requests.post(api_url + 'deposits/payment-method', auth=auth, data=json.dumps(sendData))
+    
+    if(r.status_code == 200 and "payout_at" in r.json()):
+        print("Successful deposit.")
+        logNormal(str(datetime.now()) + ": " + "Successfully deposited $" + str(balance_orderx2_diff) + " into Coinbase Pro." + "\n")
+    else:
+        print("Failed deposit.")
+        print(r.text)
+        logNormal(str(datetime.now()) + ": " + "Failed deposit: "+ r.text + "\n")
+        
+def placeOrder(amount):
+    print("Ordering Bitcoin")
+    sendData = {"type":"market", "side":"buy", "product_id":"BTC-USD", "funds":amount}
+    r = requests.post(api_url + 'orders', auth=auth, data=json.dumps(sendData))
+    
+    if(r.status_code == 200 and "status" in r.json() and r.json()["status"] == "pending"):
+        print("Successful order.")
+        logNormal(str(datetime.now()) + ": " + "Successfully bought $" + str(settings["orderInDollars"]) + " worth of BTC." + "\n")
+    else:
+        print("Order failed.")
+        print(r.text)
+        logNormal(str(datetime.now()) + ": " + "Failed order: "+ r.text + "\n")
+
+
+# Start
 try:
     auth_info = getJsonFile("auth.json")
     auth = CoinbaseExchangeAuth(auth_info["key"], auth_info["secret"], auth_info["password"])
     settings = getJsonFile("app.conf.json")
 
     # Step 1. Get USD Balance
-    print("Getting USD balance.")
-    r = requests.get(api_url + 'accounts', auth=auth)
-    usd_balance = -1
-    if(r.status_code == 200):
-        for currency in r.json():
-            if(currency["currency"] == "USD"):
-                usd_balance = float(currency["balance"])
-                break
-        print("USD balance is: " + str(round(usd_balance, 2)))
-    else:
-        raise Exception("Failed to get USD balance.")
+    usd_balance = getUsdBalance()
             
-    # Step 2. If USD balance is lower than 2x the purchase amount, top up
-    balance_orderx2_diff = (settings["orderInDollars"] * 2) - usd_balance
-    balance_orderx2_diff = round(balance_orderx2_diff, 2) + 0.01 # add a penny in case of rounding down
-    if(balance_orderx2_diff > 0):
-        print("Balance is " + str(balance_orderx2_diff) + " lower than double order amount, attempting to top up")
-        
-        r = requests.get(api_url + 'payment-methods', auth=auth).json()
-        bankId = ""
-        for bank in r:
-            if(settings["bankIdentifier"] in bank["name"]):
-                print("Using payment method: " + bank["name"])
-                bankId = bank["id"]
-                break
-        if(bankId == ""):
-            raise Exception("Bank Identifier not found in payment methods")
-        
-        print("Requesting deposit...")
-        sendData = {"amount":balance_orderx2_diff, "currency":"USD", "payment_method_id":bankId}
-        r = requests.post(api_url + 'deposits/payment-method', auth=auth, data=json.dumps(sendData))
-        if(r.status_code == 200 and "payout_at" in r.json()):
-            print("Successful deposit.")
-            with open(SCRIPT_PATH + "log.log", "a") as f:
-                f.write(str(datetime.now()) + ": " + "Successfully deposited $" + str(balance_orderx2_diff) + " into Coinbase Pro." + "\n")
-        else:
-            print("Failed deposit.")
-            print(r.text)
-            with open(SCRIPT_PATH + "log.log", "a") as f:
-                f.write(str(datetime.now()) + ": " + "Failed deposit: "+ r.text + "\n")
-            
-        
+    # Step 2. If USD balance is lower than the purchase amount, top up
+    balance_order_diff = settings["orderInDollars"] - usd_balance
+    balance_order_diff = round(balance_order_diff, 2) + 0.01 # add a penny in case of rounding down
+    if(balance_order_diff > 0):
+        print("Balance is " + str(balance_order_diff) + " lower than order amount, attempting to top up")
+        depositFromBank(balance_order_diff)
+    
     # Step 3. Order Bitcoin
-    print("Ordering Bitcoin")
-    sendData = {"type":"market", "side":"buy", "product_id":"BTC-USD", "funds":settings["orderInDollars"]}
-    r = requests.post(api_url + 'orders', auth=auth, data=json.dumps(sendData))
-    if(r.status_code == 200 and "status" in r.json() and r.json()["status"] == "pending"):
-        print("Successful order.")
-        with open(SCRIPT_PATH + "log.log", "a") as f:
-            f.write(str(datetime.now()) + ": " + "Successfully bought $" + str(settings["orderInDollars"]) + " worth of BTC." + "\n")
-    else:
-        print("Order failed.")
-        print(r.text)
-        with open(SCRIPT_PATH + "log.log", "a") as f:
-            f.write(str(datetime.now()) + ": " + "Failed order: "+ r.text + "\n")
+    placeOrder(settings["orderInDollars"])
         
     print("End")
 
 except Exception as e:
-    with open(SCRIPT_PATH + "error.log", "a") as f:
-        f.write(str(datetime.now()) + ": " + str(e)+"\n")
+    logError(str(datetime.now()) + ": " + str(e)+"\n")
     raise e
