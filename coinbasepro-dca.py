@@ -100,14 +100,14 @@ def tryPlaceOrder(sendData):
     return requests.post(api_url + 'orders', auth=auth, data=json.dumps(sendData))
         
 def placeOrder(amount):
-    print("Ordering " + str(amount) + " of Bitcoin")
+    print("Ordering $" + str(amount) + " of Bitcoin")
     tryCount = 1
     sendData = {"type":"market", "side":"buy", "product_id":"BTC-USD", "funds":amount}
     while tryCount <= settings["retryOrderCount"]:
         r = tryPlaceOrder(sendData)
-        if(r.status_code == 200 and "size" in r.json()):
+        if(r.status_code == 200 and "funds" in r.json()):
             print("Successful order.")
-            logNormal(str(datetime.now()) + ": " + "Successfully bought $" + str(r.json()["size"]) + " BTC.")
+            logNormal(str(datetime.now()) + ": " + "Successfully bought $" + str(r.json()["funds"]) + " BTC.")
             return
         elif(tryCount+1 <= settings["retryOrderCount"] and r.status_code == 400 and "message" in r.json() and r.json()["message"] == "Insufficient funds"):
             print("Order failed on attempt #" + str(tryCount) + ". Trying again in " + str(settings["retryOrderWaitSeconds"]) + " seconds.")
