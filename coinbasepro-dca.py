@@ -54,11 +54,11 @@ def setJsonFile(name, text):
     
 def logNormal(message):
     with open(SCRIPT_PATH + "log.log", "a") as f:
-        f.write(message)
+        f.write(message + "\n")
 
 def logError(message):
     with open(SCRIPT_PATH + "error.log", "a") as f:
-        f.write(message)
+        f.write(message + "\n")
 
 
 def getUsdBalance():
@@ -90,11 +90,11 @@ def depositFromBank(amount):
     
     if(r.status_code == 200 and "amount" in r.json()):
         print("Successful deposit.")
-        logNormal(str(datetime.now()) + ": " + "Successfully deposited $" + str(r.json()["amount"]) + " into Coinbase Pro." + "\n")
+        logNormal(str(datetime.now()) + ": " + "Successfully deposited $" + str(r.json()["amount"]) + " into Coinbase Pro.")
     else:
         print("Failed deposit.")
         print(r.text)
-        logNormal(str(datetime.now()) + ": " + "Failed deposit: "+ r.text + "\n")
+        logNormal(str(datetime.now()) + ": " + "Failed deposit: "+ r.text)
 
 def tryPlaceOrder(sendData):
     return requests.post(api_url + 'orders', auth=auth, data=json.dumps(sendData))
@@ -107,7 +107,7 @@ def placeOrder(amount):
         r = tryPlaceOrder(sendData)
         if(r.status_code == 200 and "status" in r.json() and r.json()["status"] == "pending"):
             print("Successful order.")
-            logNormal(str(datetime.now()) + ": " + "Successfully bought $" + str(settings["orderInDollars"]) + " worth of BTC." + "\n")
+            logNormal(str(datetime.now()) + ": " + "Successfully bought $" + str(settings["orderInDollars"]) + " worth of BTC.")
             return
         elif(tryCount+1 <= settings["retryOrderCount"] and r.status_code == 400 and "message" in r.json() and r.json()["message"] == "Insufficient funds"):
             print("Order failed on attempt #" + str(tryCount) + ". Trying again in " + str(settings["retryOrderWaitSeconds"]) + " seconds.")
@@ -143,5 +143,5 @@ try:
     print("End")
 
 except Exception as e:
-    logError(str(datetime.now()) + ": " + str(e)+"\n")
+    logError(str(datetime.now()) + ": " + str(e))
     raise e
