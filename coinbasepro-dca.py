@@ -1,7 +1,7 @@
 # dependent on requests package (pip install requests)
 # and Path (pip install pathlib)
 
-import json, hmac, hashlib, time, requests, base64, math
+import json, hmac, hashlib, time, requests, base64, math, os
 from requests.auth import AuthBase
 from pathlib import Path
 from datetime import datetime
@@ -32,11 +32,13 @@ class CoinbaseExchangeAuth(AuthBase):
 
 api_url = 'https://api.pro.coinbase.com/'
 
+SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
+
 def getJsonFile(name):
-    if not Path(name).is_file():
+    if not Path(SCRIPT_PATH + name).is_file():
         raise ValueError("Missing " + name)
     try:
-        with open(name, "r+") as f:
+        with open(SCRIPT_PATH + name, "r+") as f:
             return json.loads(f.read())
     except Exception as e:
         print("Failed to get file: " + name + " because of exception: " + str(e))
@@ -44,7 +46,7 @@ def getJsonFile(name):
     
 def setJsonFile(name, text):
     try:
-        with open(name, "w+") as f:
+        with open(SCRIPT_PATH + name, "w+") as f:
             f.write(json.dumps(text))
     except Exception as e:
         print("Failed to write file: " + name + "because of exception: " + str(e))
@@ -108,6 +110,6 @@ try:
     print("End")
 
 except Exception as e:
-    with open("error.log", "a") as f:
+    with open(SCRIPT_PATH + "error.log", "a") as f:
             f.write(str(datetime.now()) + ": " + str(e)+"\n")
     raise e
