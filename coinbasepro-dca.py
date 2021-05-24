@@ -58,7 +58,7 @@ settings = getJsonFile("app.conf.json")
 print("Getting USD balance.")
 r = requests.get(api_url + 'accounts', auth=auth)
 usd_balance = -1
-if(r.status_code == 200)
+if(r.status_code == 200):
     for currency in r.json():
         if(currency["currency"] == "USD"):
             usd_balance = float(currency["balance"])
