@@ -88,9 +88,9 @@ def depositFromBank(amount):
     sendData = {"amount":amount, "currency":"USD", "payment_method_id":bankId}
     r = requests.post(api_url + 'deposits/payment-method', auth=auth, data=json.dumps(sendData))
     
-    if(r.status_code == 200 and "payout_at" in r.json()):
+    if(r.status_code == 200 and "amount" in r.json()):
         print("Successful deposit.")
-        logNormal(str(datetime.now()) + ": " + "Successfully deposited $" + str(balance_orderx2_diff) + " into Coinbase Pro." + "\n")
+        logNormal(str(datetime.now()) + ": " + "Successfully deposited $" + str(r.json()["amount"]) + " into Coinbase Pro." + "\n")
     else:
         print("Failed deposit.")
         print(r.text)
@@ -106,6 +106,7 @@ def placeOrder(amount):
         logNormal(str(datetime.now()) + ": " + "Successfully bought $" + str(settings["orderInDollars"]) + " worth of BTC." + "\n")
     else:
         print("Order failed.")
+        print(r.status_code)
         print(r.text)
         logNormal(str(datetime.now()) + ": " + "Failed order: "+ r.text + "\n")
 
