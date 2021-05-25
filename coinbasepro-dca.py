@@ -141,7 +141,7 @@ else:
         if(balance_order_diff > 0):
             print("Balance is " + str(balance_order_diff) + " lower than order amount, attempting to top up")
             if(settings["bankDepositMultiplier"] > 1):
-                print("Multiplying deposit by " + settings["bankDepositMultiplier"] + ".")
+                print("Multiplying deposit by " + str(settings["bankDepositMultiplier"]) + ".")
                 balance_order_diff = balance_order_diff * settings["bankDepositMultiplier"]
             depositFromBank(balance_order_diff)
         
