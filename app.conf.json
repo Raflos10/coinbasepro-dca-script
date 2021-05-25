@@ -1,5 +1,6 @@
 {
   "bankIdentifier": "bank-identifier-here",
+  "bankDepositMultiplier": 1,
   "retryOrderCount": 4,
   "retryOrderWaitSeconds": 30
 } 
