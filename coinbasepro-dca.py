@@ -68,11 +68,9 @@ def recordUsdSpent(amount):
         if Path(filepath).is_file():
             with open(filepath, "r") as f:
                 prev = float(f.read())
+        final = round(prev+amount, 2)
         with open(filepath, "w+") as f:
-            f.seek(0)
-            final = round(prev+amount, 2)
             f.write(str(final))
-            f.truncate()
     except Exception as e:
         print("Failed to get file: " + filepath + " because of exception: " + str(e))
         raise e
