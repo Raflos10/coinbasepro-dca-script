@@ -38,7 +38,7 @@ def getJsonFile(name):
     if not Path(SCRIPT_PATH + name).is_file():
         raise ValueError("Missing " + name)
     try:
-        with open(SCRIPT_PATH + name, "r+") as f:
+        with open(SCRIPT_PATH + name, "r") as f:
             return json.loads(f.read())
     except Exception as e:
         print("Failed to get file: " + name + " because of exception: " + str(e))
@@ -61,18 +61,18 @@ def logError(message):
         f.write(message + "\n")
 
 
-def recordUsdSpent(amount):
-    filepath = SCRIPT_PATH + "usd_spent.log"
+def recordUsdSpent(spent, filled):
+    filename = "usd_spent.log"
     try:
-        prev = 0
-        if Path(filepath).is_file():
-            with open(filepath, "r") as f:
-                prev = float(f.read())
-        final = round(prev+amount, 2)
-        with open(filepath, "w+") as f:
-            f.write(str(final))
+        prev = { "usd_spent" : 0, "usd_filled" : 0.0 }
+        if Path(filename).is_file():
+            prev = getJsonFile(filename)
+        spent = spent + prev["usd_spent"]
+        filled = round(filled + prev["usd_filled"], 2)
+        final = { "usd_spent" : spent, "usd_filled" : filled }
+        setJsonFile(filename, final)
     except Exception as e:
-        print("Failed to get file: " + filepath + " because of exception: " + str(e))
+        print("Failed to get file: " + filename + " because of exception: " + str(e))
         raise e
 
 
@@ -122,9 +122,10 @@ def placeOrder(amount):
         r = tryPlaceOrder(sendData)
         if(r.status_code == 200 and "funds" in r.json()):
             print("Successful order.")
-            orderAmountUsd = r.json()["funds"]
-            logNormal(str(datetime.now()) + ": " + "Successfully bought $" + str(orderAmountUsd) + " of BTC.")
-            recordUsdSpent(orderAmountUsd)
+            spentAmountUsd = r.json()["specified_funds"]
+            filledAmountUsd = r.json()["funds"]
+            logNormal(str(datetime.now()) + ": " + "Successfully bought $" + filledAmountUsd + " of BTC.")
+            recordUsdSpent(int(spentAmountUsd), float(filledAmountUsd))
             return
         elif(tryCount+1 <= settings["retryOrderCount"] and r.status_code == 400 and "message" in r.json() and r.json()["message"] == "Insufficient funds"):
             print("Order failed on attempt #" + str(tryCount) + ". Trying again in " + str(settings["retryOrderWaitSeconds"]) + " seconds.")
