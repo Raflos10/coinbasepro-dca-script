@@ -61,6 +61,23 @@ def logError(message):
         f.write(message + "\n")
 
 
+def recordUsdSpent(amount):
+    filepath = SCRIPT_PATH + "usd_spent.log"
+    try:
+        prev = 0
+        if Path(filepath).is_file():
+            with open(filepath, "r") as f:
+                prev = float(f.read())
+        with open(filepath, "w+") as f:
+            f.seek(0)
+            final = round(prev+amount, 2)
+            f.write(str(final))
+            f.truncate()
+    except Exception as e:
+        print("Failed to get file: " + filepath + " because of exception: " + str(e))
+        raise e
+
+
 def getUsdBalance():
     print("Getting USD balance.")
     r = requests.get(api_url + 'accounts', auth=auth)
@@ -107,7 +124,9 @@ def placeOrder(amount):
         r = tryPlaceOrder(sendData)
         if(r.status_code == 200 and "funds" in r.json()):
             print("Successful order.")
-            logNormal(str(datetime.now()) + ": " + "Successfully bought $" + str(r.json()["funds"]) + " of BTC.")
+            orderAmountUsd = r.json()["funds"]
+            logNormal(str(datetime.now()) + ": " + "Successfully bought $" + str(orderAmountUsd) + " of BTC.")
+            recordUsdSpent(orderAmountUsd)
             return
         elif(tryCount+1 <= settings["retryOrderCount"] and r.status_code == 400 and "message" in r.json() and r.json()["message"] == "Insufficient funds"):
             print("Order failed on attempt #" + str(tryCount) + ". Trying again in " + str(settings["retryOrderWaitSeconds"]) + " seconds.")
