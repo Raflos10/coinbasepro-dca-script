@@ -65,7 +65,7 @@ def recordUsdSpent(spent, filled):
     filename = "usd_spent.log"
     try:
         prev = { "usd_spent" : 0, "usd_filled" : 0.0 }
-        if Path(filename).is_file():
+        if Path(SCRIPT_PATH + filename).is_file():
             prev = getJsonFile(filename)
         spent = spent + prev["usd_spent"]
         filled = round(filled + prev["usd_filled"], 2)
