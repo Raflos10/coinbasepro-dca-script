@@ -63,18 +63,22 @@ def logError(message):
 
 def recordUsdSpent(spent, filled):
     filename = "usd_spent.log"
-    try:
-        prev = { "usd_spent" : 0, "usd_filled" : 0.0 }
-        if Path(SCRIPT_PATH + filename).is_file():
-            prev = getJsonFile(filename)
-        spent = spent + prev["usd_spent"]
-        filled = round(filled + prev["usd_filled"], 2)
-        final = { "usd_spent" : spent, "usd_filled" : filled }
-        setJsonFile(filename, final)
-    except Exception as e:
-        print("Failed to get file: " + filename + " because of exception: " + str(e))
-        raise e
-
+    prev = { "usd_spent" : 0, "usd_filled" : 0.0 }
+    if Path(SCRIPT_PATH + filename).is_file():
+        prev = getJsonFile(filename)
+    spent = spent + prev["usd_spent"]
+    filled = round(filled + prev["usd_filled"], 2)
+    final = { "usd_spent" : spent, "usd_filled" : filled }
+    setJsonFile(filename, final)
+    
+def recordPrice(weight, price):
+    filename = "test-prices.log"
+    prev = []
+    if Path(SCRIPT_PATH + filename).is_file():
+        prev = getJsonFile(filename)
+    entry = {"weight" : weight, "price" : price}
+    prev.append(entry)
+    setJsonFile(filename, prev)
 
 def getUsdBalance():
     print("Getting USD balance.")
@@ -113,6 +117,22 @@ def depositFromBank(amount):
 
 def tryPlaceOrder(sendData):
     return requests.post(api_url + 'orders', auth=auth, data=json.dumps(sendData))
+
+def tryGetFinishedOrder(id):
+    r = requests.get(api_url + 'orders/' + id, auth=auth)
+    response = r.json()
+    tryCount = 1
+    while tryCount <= settings["retryOrderCount"]:
+        if(r.status_code == 200 and "status" in response and response["status"] == "done"):
+            value = float(response["executed_value"])
+            price = round(value / float(response["filled_size"]), 2)
+            recordPrice(round(value,2), price)
+            break
+        elif(tryCount+1 <= settings["retryOrderCount"] and "status" in response):
+            time.sleep(settings["retryOrderWaitSeconds"])
+            tryCount+=1
+        else:
+            logError("Failed to get order " + id + ".\n" + r.text)
         
 def placeOrder(amount):
     print("Ordering $" + str(amount) + " of Bitcoin")
@@ -120,14 +140,16 @@ def placeOrder(amount):
     sendData = {"type":"market", "side":"buy", "product_id":"BTC-USD", "funds":amount}
     while tryCount <= settings["retryOrderCount"]:
         r = tryPlaceOrder(sendData)
-        if(r.status_code == 200 and "funds" in r.json()):
+        response = r.json()
+        if(r.status_code == 200 and "funds" in response):
             print("Successful order.")
-            spentAmountUsd = r.json()["specified_funds"]
-            filledAmountUsd = r.json()["funds"]
+            spentAmountUsd = response["specified_funds"]
+            filledAmountUsd = response["funds"]
             logNormal(str(datetime.now()) + ": " + "Successfully bought $" + filledAmountUsd + " of BTC.")
             recordUsdSpent(int(spentAmountUsd), float(filledAmountUsd))
+            tryGetFinishedOrder(response["id"])
             return
-        elif(tryCount+1 <= settings["retryOrderCount"] and r.status_code == 400 and "message" in r.json() and r.json()["message"] == "Insufficient funds"):
+        elif(tryCount+1 <= settings["retryOrderCount"] and r.status_code == 400 and "message" in response and response["message"] == "Insufficient funds"):
             print("Order failed on attempt #" + str(tryCount) + ". Trying again in " + str(settings["retryOrderWaitSeconds"]) + " seconds.")
             time.sleep(settings["retryOrderWaitSeconds"])
             tryCount += 1
