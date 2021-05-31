@@ -72,7 +72,7 @@ def recordUsdSpent(spent, filled):
     setJsonFile(filename, final)
     
 def recordPrice(weight, price):
-    filename = "test-prices.log"
+    filename = "prices.log"
     prev = []
     if Path(SCRIPT_PATH + filename).is_file():
         prev = getJsonFile(filename)
