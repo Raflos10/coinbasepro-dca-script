@@ -92,7 +92,7 @@ def getUsdBalance():
     else:
         raise Exception("Failed to get USD balance.")
 
-def depositFromBank(amount):
+def tryDepositFromBank(amount):
     r = requests.get(api_url + 'payment-methods', auth=auth).json()
     bankId = ""
     for bank in r:
@@ -110,10 +110,12 @@ def depositFromBank(amount):
     if(r.status_code == 200 and "amount" in r.json()):
         print("Successful deposit.")
         logNormal(str(datetime.now()) + ": " + "Successfully deposited $" + str(r.json()["amount"]) + " into Coinbase Pro.")
+        return True
     else:
         print("Failed deposit.")
         print(r.text)
         logNormal(str(datetime.now()) + ": " + "Failed deposit: "+ r.text)
+        return False
 
 def tryPlaceOrder(sendData):
     return requests.post(api_url + 'orders', auth=auth, data=json.dumps(sendData))
@@ -179,15 +181,17 @@ else:
         # Step 2. If USD balance is lower than the purchase amount, top up
         balance_order_diff = dollar_amount - usd_balance
         balance_order_diff = round(balance_order_diff, 2) + 0.01 # add a penny in case of rounding down
-        if(balance_order_diff > 0):
+        hasEnough = balance_order_diff < 0
+        if not hasEnough:
             print("Balance is " + str(balance_order_diff) + " lower than order amount, attempting to top up")
             if(settings["bankDepositMultiplier"] > 1):
                 print("Multiplying deposit by " + str(settings["bankDepositMultiplier"]) + ".")
                 balance_order_diff = balance_order_diff * settings["bankDepositMultiplier"]
-            depositFromBank(balance_order_diff)
+            hasEnough = tryDepositFromBank(balance_order_diff)
         
         # Step 3. Order Bitcoin
-        placeOrder(dollar_amount)
+        if hasEnough:
+            placeOrder(dollar_amount)
             
         print("End")
 
