@@ -104,7 +104,7 @@ def depositFromBank(amount):
         raise Exception("Bank Identifier not found in payment methods")
     
     print("Requesting deposit...")
-    sendData = {"amount":amount, "currency":"USD", "payment_method_id":bankId}
+    sendData = {"amount":round(amount, 2), "currency":"USD", "payment_method_id":bankId}
     r = requests.post(api_url + 'deposits/payment-method', auth=auth, data=json.dumps(sendData))
     
     if(r.status_code == 200 and "amount" in r.json()):
