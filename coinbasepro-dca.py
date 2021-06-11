@@ -133,6 +133,7 @@ def tryGetFinishedOrder(id):
             tryCount+=1
         else:
             logError("Failed to get order " + id + ".\n" + r.text)
+            break
         
 def placeOrder(amount):
     print("Ordering $" + str(amount) + " of Bitcoin")
