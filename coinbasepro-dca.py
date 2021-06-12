@@ -83,9 +83,9 @@ def recordPrice(weight, price):
 def getUsdBalance():
     print("Getting USD balance.")
     r = requests.get(api_url + 'accounts', auth=auth)
-    if(r.status_code == 200):
+    if r.status_code == 200:
         for currency in r.json():
-            if(currency["currency"] == "USD"):
+            if currency["currency"] == "USD":
                 balance = round(float(currency["balance"]), 2)
                 print("USD balance is: " + str(balance))
                 return float(currency["balance"])
@@ -96,18 +96,18 @@ def tryDepositFromBank(amount):
     r = requests.get(api_url + 'payment-methods', auth=auth).json()
     bankId = ""
     for bank in r:
-        if(settings["bankIdentifier"] in bank["name"]):
+        if settings["bankIdentifier"] in bank["name"]:
             print("Using payment method: " + bank["name"])
             bankId = bank["id"]
             break
-    if(bankId == ""):
+    if bankId == "":
         raise Exception("Bank Identifier not found in payment methods")
     
     print("Requesting deposit...")
     sendData = {"amount":round(amount, 2), "currency":"USD", "payment_method_id":bankId}
     r = requests.post(api_url + 'deposits/payment-method', auth=auth, data=json.dumps(sendData))
     
-    if(r.status_code == 200 and "amount" in r.json()):
+    if r.status_code == 200 and "amount" in r.json():
         print("Successful deposit.")
         logNormal(str(datetime.now()) + ": " + "Successfully deposited $" + str(r.json()["amount"]) + " into Coinbase Pro.")
         return True
@@ -125,12 +125,12 @@ def tryGetFinishedOrder(id):
     response = r.json()
     tryCount = 1
     while tryCount <= settings["retryOrderCount"]:
-        if(r.status_code == 200 and "status" in response and response["status"] == "done"):
+        if r.status_code == 200 and "status" in response and response["status"] == "done":
             value = float(response["executed_value"])
             price = round(value / float(response["filled_size"]), 2)
             recordPrice(round(value,2), price)
             break
-        elif(tryCount+1 <= settings["retryOrderCount"] and "status" in response):
+        elif tryCount+1 <= settings["retryOrderCount"] and "status" in response:
             time.sleep(settings["retryOrderWaitSeconds"])
             tryCount+=1
         else:
@@ -144,7 +144,7 @@ def placeOrder(amount):
     while tryCount <= settings["retryOrderCount"]:
         r = tryPlaceOrder(sendData)
         response = r.json()
-        if(r.status_code == 200 and "funds" in response):
+        if r.status_code == 200 and "funds" in response:
             print("Successful order.")
             spentAmountUsd = response["specified_funds"]
             filledAmountUsd = response["funds"]
@@ -152,7 +152,7 @@ def placeOrder(amount):
             recordUsdSpent(int(spentAmountUsd), float(filledAmountUsd))
             tryGetFinishedOrder(response["id"])
             return
-        elif(tryCount+1 <= settings["retryOrderCount"] and r.status_code == 400 and "message" in response and response["message"] == "Insufficient funds"):
+        elif tryCount+1 <= settings["retryOrderCount"] and r.status_code == 400 and "message" in response and response["message"] == "Insufficient funds":
             print("Order failed on attempt #" + str(tryCount) + ". Trying again in " + str(settings["retryOrderWaitSeconds"]) + " seconds.")
             time.sleep(settings["retryOrderWaitSeconds"])
             tryCount += 1
@@ -165,7 +165,7 @@ def placeOrder(amount):
 
 
 # Start
-if(len(sys.argv) != 2):
+if len(sys.argv) != 2:
     print("Useage: python coinbasepro-dca.py [dollar amount]")
 else:
     dollar_amount = int(sys.argv[1])
@@ -184,7 +184,7 @@ else:
         hasEnough = balance_order_diff < 0
         if not hasEnough:
             print("Balance is " + str(balance_order_diff) + " lower than order amount, attempting to top up")
-            if(settings["bankDepositMultiplier"] > 1):
+            if settings["bankDepositMultiplier"] > 1:
                 print("Multiplying deposit by " + str(settings["bankDepositMultiplier"]) + ".")
                 balance_order_diff = balance_order_diff * settings["bankDepositMultiplier"]
             hasEnough = tryDepositFromBank(balance_order_diff)
