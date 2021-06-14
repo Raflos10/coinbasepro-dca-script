@@ -130,12 +130,13 @@ def tryGetFinishedOrder(id):
             price = round(value / float(response["filled_size"]), 2)
             recordPrice(round(value,2), price)
             break
-        elif tryCount+1 <= settings["retryOrderCount"] and "status" in response:
-            time.sleep(settings["retryOrderWaitSeconds"])
-            tryCount+=1
-        else:
-            logError("Failed to get order " + id + ".\n" + r.text)
-            break
+        elif tryCount+1 <= settings["retryOrderCount"]:
+            if "status" in response or ("message" in response and response["message"] == "NotFound"):
+                time.sleep(settings["retryOrderWaitSeconds"])
+                tryCount+=1
+                continue
+        logError("Failed to get order " + id + ".\n" + r.text)
+        break
         
 def placeOrder(amount):
     print("Ordering $" + str(amount) + " of Bitcoin")
@@ -181,7 +182,7 @@ else:
         # Step 2. If USD balance is lower than the purchase amount, top up
         balance_order_diff = dollar_amount - usd_balance
         balance_order_diff = round(balance_order_diff, 2) + 0.01 # add a penny in case of rounding down
-        hasEnough = balance_order_diff < 0
+        hasEnough = balance_order_diff <= 0
         if not hasEnough:
             print("Balance is " + str(balance_order_diff) + " lower than order amount, attempting to top up")
             if settings["bankDepositMultiplier"] > 1:
