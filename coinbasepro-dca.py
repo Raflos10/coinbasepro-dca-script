@@ -185,10 +185,7 @@ else:
         hasEnough = balance_order_diff <= 0
         if not hasEnough:
             print("Balance is " + str(balance_order_diff) + " lower than order amount, attempting to top up")
-            if settings["bankDepositMultiplier"] > 1:
-                print("Multiplying deposit by " + str(settings["bankDepositMultiplier"]) + ".")
-                balance_order_diff = balance_order_diff * settings["bankDepositMultiplier"]
-            hasEnough = tryDepositFromBank(balance_order_diff)
+            hasEnough = tryDepositFromBank(settings["bankDepositAmount"])
         
         # Step 3. Order Bitcoin
         if hasEnough:
