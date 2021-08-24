@@ -180,20 +180,19 @@ else:
         usd_balance = getUsdBalance()
                 
         # Step 2. If USD balance is lower than the purchase amount, top up
-        if settings["bankDepositAmount"] <= 0:
-            logNormal(str(datetime.now()) + ": " + "Balance is lower than order amount, but bank deposit amount not set.")
-            
-        else:
-            balance_order_diff = dollar_amount - usd_balance
-            balance_order_diff = round(balance_order_diff, 2) + 0.01 # add a penny in case of rounding down
-            hasEnough = balance_order_diff <= 0
-            if not hasEnough:
+        balance_order_diff = dollar_amount - usd_balance
+        balance_order_diff = round(balance_order_diff, 2) + 0.01 # add a penny in case of rounding down
+        hasEnough = balance_order_diff <= 0
+        if not hasEnough:
+            if settings["bankDepositAmount"] <= balance_order_diff:
+                logNormal(str(datetime.now()) + ": " + "Bank Deposit amount is lower than order amount. Increase this amount if you want to continue.")
+            else:
                 print("Balance is " + str(balance_order_diff) + " lower than order amount, attempting to top up")
                 hasEnough = tryDepositFromBank(settings["bankDepositAmount"])
-            
-            # Step 3. Order Bitcoin
-            if hasEnough:
-                placeOrder(dollar_amount)
+        
+        # Step 3. Order Bitcoin
+        if hasEnough:
+            placeOrder(dollar_amount)
             
         print("End")
 
